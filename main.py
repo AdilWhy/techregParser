@@ -1,13 +1,16 @@
+from models import session, Serts
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from models import Serts
 import orm
-from RemoteDriver import remoteDriver
 from bs4 import BeautifulSoup
+from datetime import datetime
 
-driver = remoteDriver
-session = orm.Session()
+# from remotedriver import remotedriver
+# driver = remotedriver
+
+from chromedriver import chromedriver
+driver = chromedriver
 
 
 def insert_to_db(*args):
@@ -20,7 +23,10 @@ def insert_to_db(*args):
      status,
      name_organization,
      name_arrc,
-     type_management) = args
+     type_management, _) = args
+    registrated_at = datetime.strptime(registrated_at, '%d.%m.%Y')
+    certificated_at = datetime.strptime(certificated_at, '%d.%m.%Y')
+    end_at = datetime.strptime(end_at, '%d.%m.%Y')
     new_Sert = Serts(id,
                      iin,
                      reg_number,
@@ -32,7 +38,9 @@ def insert_to_db(*args):
                      type_management)
     try:
         differences = get_differences(orm.select_value(session, id), new_Sert)
-        orm.update_value(session=session, target_id=id, differences=differences)
+        if differences:
+            orm.update_value(session=session, target_id=id, differences=differences)
+            print(f"In id {id} updated values {differences}\n")
     except Exception as e:
         orm.insert_value(session=session, serts=new_Sert)
         print("New serts has been inserted")
@@ -47,6 +55,7 @@ def get_differences(existing_sert, new_sert):
             differences[key] = new_value
     return differences
 
+
 def getBIN(href):
     main_window = driver.current_window_handle
 
@@ -56,9 +65,10 @@ def getBIN(href):
     driver.get(url)
 
     s = BeautifulSoup(driver.page_source, features="html.parser")
-
-    BIN = s.findAll("i", {"class": "text-font-12"})[1].get_text(strip=True).split(',')[0].strip()
-
+    try:
+        BIN = s.findAll("i", {"class": "text-font-12"})[1].get_text(strip=True).split(',')[0].strip()
+    except:
+        BIN = None
     driver.close()
 
     driver.switch_to.window(main_window)
@@ -83,9 +93,9 @@ def main():
                         continue
                     serts_list.append(td.text.strip())
 
-                insert_to_db(serts_list)
+                insert_to_db(*serts_list)
 
-            btn = WebDriverWait(driver, 10).until(
+            btn = WebDriverWait(driver, 20).until(
                 EC.element_to_be_clickable((By.XPATH, "//a[@class='page-link'][@aria-label='Следующая страница']")))
             btn.click()
     except Exception as e:

@@ -1,0 +1,37 @@
+version: "3.9"
+services:
+  postgres:
+    image: postgres:latest
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready", "-d", "db_prod"]
+      interval: 30s
+      timeout: 60s
+      retries: 5
+      start_period: 80s
+  restarter:
+    image: docker:cli
+    restart: unless-stopped
+    volumes: [ "/var/run/docker.sock:/var/run/docker.sock" ]
+    entrypoint: [ "/bin/sh","-c" ]
+    command:
+      - |
+        while true; do
+          if [ "$$(date +'%H:%M')" = '12:00' ]; then
+            docker restart script
+          fi
+          sleep 60
+        done
+  script:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy

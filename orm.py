@@ -7,7 +7,8 @@ def insert_value(session: Session, serts: Serts):
         session.add(serts)
         session.commit()
     except Exception as e:
-        print(e)
+        session.rollback()
+        raise
 
 
 def select_value(session: Session, target_id):
