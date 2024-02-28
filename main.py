@@ -80,6 +80,9 @@ def main():
     driver.get(url)
     try:
         while True:
+            wait = WebDriverWait(driver, 60)
+            wait.until(EC.presence_of_element_located((By.XPATH, "//table[@class='sw-table-content']")))
+
             soup = BeautifulSoup(driver.page_source, features='html.parser')
 
             trs = soup.find('table', {'class': 'sw-table-content'}).find_all('tr')
